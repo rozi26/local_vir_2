@@ -22,6 +22,15 @@ def install_virus():
     print(f"VIR_PATH: \t{VIR_PATH}\nCODE_PATH: \t{SRC_CODE_PATH}\nDEST_PATH: \t{DEST_PATH}")
     os.mkdir(DEST_PATH)
     st.copytree(SRC_PYTHON_PATH,DEST_PATH)
-
+    #st.copytree(SRC_CODE_PATH,DEST_PATH + "\\vir")
+    
 if (__name__ == "__main__"):
-    install_virus()
+    for i in range(10):
+        try:
+            install_virus()
+        except Exception as e:
+            print(f"fail to install virus at try {i} with error {e}")
+            anser = input("do you want to try again: ")
+            if (anser != "yes"):
+                print("exit without installtion")
+                exit()
