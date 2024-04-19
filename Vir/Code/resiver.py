@@ -20,7 +20,8 @@ async def receive_dict(data: dict):
 @app.get("/screenshot")
 async def get_screenshot(data: dict={}):
     monitor = data["monitor"] if ("monitor" in data.keys()) else 1
-    img = ut.get_screenshot_async(monitor) 
+    pix = data["pix"] if ("pix" in data.keys()) else None
+    img = ut.get_screenshot_async(monitor,pix) 
     _,img_jpeg = cv2.imencode(".jpg",img)
     return Response(content=img_jpeg.tobytes(),media_type="image/jpg")
 
