@@ -1,10 +1,12 @@
 import requests
 import aiohttp
-
-async def send_post_request_async(url, data):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data) as response:
-            return await response.json()
+import numpy as np
+import time
+import io
+import asyncio
+from utils import send_get_request_async, send_post_request_async
+from PIL import Image
+from matplotlib import pyplot as plt
 
 class Connector:
     def __init__(self,ip,port=8000) -> None:
@@ -14,6 +16,17 @@ class Connector:
         data["command"] = command
         return await send_post_request_async(self.url,data)
     
+    async def get_screenshot(self,monitor=1,pix=500000) -> np.array:
+        data = {"monitor":monitor,"pix":pix}
+        img_data = await send_get_request_async(f"{self.url}/screenshot",data)
+        img = np.array(Image.open(io.BytesIO(img_data)))
+        return img
+    
+
+async def test():
+    con = Connector("192.168.1.231")
+    img = await con.get_screenshot()
 
 if (__name__ == "__main__"):
-    pass
+    asyncio.run(test())
+    time.sleep(10)
