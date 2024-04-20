@@ -15,6 +15,5 @@ def get_screenshot_async(screen=1,pix=None):
         screenshot = sct.grab(monitor)
         img = np.array(screenshot,dtype=np.uint8)
         a = 1 if (pix is None) else max(1,int(math.sqrt(len(img)*len(img[0])/pix)))
-        print(f"pix is {pix} and a is {a}")
         if (a != 1): img = cv2.resize(img,(len(img[0])//a,len(img)//a))
         return np.array(img)

@@ -12,13 +12,18 @@ class Connector:
     def __init__(self,ip,port=8000) -> None:
         self.url = f"http://{ip}:{port}"
     
-    async def send_command_async(self,command,data:dict) -> dict:
+    async def send_command_async(self,command,data:dict={}) -> dict:
         data["command"] = command
-        return await send_post_request_async(self.url,data)
+        return await send_post_request_async(f"{self.url}/command",data)
     
-    async def get_screenshot(self,monitor=1,pix=500000) -> np.array:
+    def send_command(self,command,data:dict={}) -> dict:
+        data["command"] = command
+        return requests.post(f"{self.url}/command",json=data).json()
+    
+    async def get_screenshot(self,monitor=1,pix=150000) -> np.array:
         data = {"monitor":monitor,"pix":pix}
         img_data = await send_get_request_async(f"{self.url}/screenshot",data)
+        print(f"data len is {len(img_data)}")
         img = np.array(Image.open(io.BytesIO(img_data)))
         return img
     
