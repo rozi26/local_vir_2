@@ -4,6 +4,7 @@ import utils as ut
 import io
 from gtts import gTTS
 import pyaudio
+import socket
 import langid
 import tkinter as tk
 from threading import Thread
@@ -24,8 +25,7 @@ async def prosses_command(data) -> dict:
             if ((k in data.keys()) and data[k]): pa.keyDown(k)
         pa.press(chr(data['code']))
         for k in add_keys:
-            if (data[k]): pa.keyUp(k)
-        
+            if (data[k]): pa.keyUp(k)      
     if (command == "scroll"): pa.scroll(data['amount'])
     if (command == "data"): return ut.get_data()
     if (command == "record_mic"): return {"content":ut.record(data['sec']),'media_type':'audio/wav'}
