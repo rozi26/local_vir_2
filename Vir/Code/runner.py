@@ -8,8 +8,9 @@ import socket
 import langid
 import tkinter as tk
 from threading import Thread
+from config import VirConfig
 
-async def prosses_command(data) -> dict:
+async def prosses_command(data: dict) -> dict:
     command = data["command"]
     if (command == "alive"): return {'message':'alive','time':time.time()}
     if (command == "mouse_move"): pa.moveTo(x=data['x'],y=data['y'])
@@ -46,6 +47,17 @@ async def prosses_command(data) -> dict:
         label = tk.Label(root,text=data['text'])
         label.pack()
         Thread(target= lambda: root.mainloop()).start()
+    if (command == "set_config"):
+        if ('config' in data.keys()):
+            new_conf: dict = data['config']
+            for key in VirConfig.keys():
+                if (not key in new_conf):
+                    raise RuntimeError(f"try to set config without the key {key}")
+            
+            for key,val in new_conf.items():
+                VirConfig[key] = val
+        return VirConfig
+        
             
     return {}
 

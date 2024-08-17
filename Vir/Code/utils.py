@@ -118,6 +118,8 @@ def play_sound(audio_bytes):
     pg.mixer.init()
     pg.mixer.music.load(audio_bytes)
     pg.mixer.music.play()
-    
+
+
+
 if (__name__ == "__main__"):
     print(get_data())
