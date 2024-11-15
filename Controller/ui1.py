@@ -15,11 +15,13 @@ HEIGHT = 1000
 MENU_HEIGHT = 50
 MENU_WIDTH = 200
 MARGIN = 20
+MESSAGE_BOARD_HEIGHT = 200
 
 MAX_IMG_WIDTH = WIDTH - MENU_WIDTH - (MARGIN * 2)
 MAX_IMG_HEIGHT = HEIGHT - ((MENU_HEIGHT + MARGIN) * 2)
 
-IP = "192.168.1.231"
+#IP = "192.168.1.231"
+IP = "http://localhost"
 
 class ImageUI(tk.Tk):
     def __init__(self):
@@ -37,10 +39,9 @@ class ImageUI(tk.Tk):
 
         #pref vars
         self.monitor = 1
-        self.pix = 250000
+        self.pix = 500000
         self.sound_buffer = 0.5
         self.img_shape = (1,1)
-
 
         self.top_menu = tk.Frame(self, height=MENU_HEIGHT, bg="lightgray")
         self.top_menu.pack(side="top", fill="x")
@@ -67,6 +68,13 @@ class ImageUI(tk.Tk):
         self.image_shower = tk.Label(self)
         self.image_shower.place(x=MARGIN,y=MENU_HEIGHT+MARGIN)
 
+        #create the message board
+        self.messagesBoard = tk.Scrollbar(self.right_menu)
+        self.messagesBoard.place(x=MENU_WIDTH-MARGIN*2,y=HEIGHT-MARGIN-MESSAGE_BOARD_HEIGHT, width=MARGIN,height=MESSAGE_BOARD_HEIGHT)
+        self.messageList = tk.Listbox(self.right_menu, yscrollcommand= self.messagesBoard.set)
+        self.messageList.place(x=MARGIN,y=HEIGHT-MARGIN-MESSAGE_BOARD_HEIGHT, width=MENU_WIDTH-MARGIN*3,height=MESSAGE_BOARD_HEIGHT)
+        self.messagesBoard.config(command=self.messageList.yview)
+
         #add the control event listeners
         self.image_shower.bind('<Motion>', lambda e: self.send_control_command('mouse_move',{
             'x':round(self.en_data[f'monitor_{self.monitor}']['width']*e.x/self.img_shape[1]),
@@ -92,7 +100,6 @@ class ImageUI(tk.Tk):
         self.img_updater.start()
     
     def send_control_command(self, command,data):
-        print(data)
         if (not self.control_mode): return
         def run():  self.connector.send_command(command,data)
         Thread(target=run).run()
@@ -109,13 +116,15 @@ class ImageUI(tk.Tk):
         except: pass
 
     def key_pressed_up_event(self,key):
-        print("upaAAaA")
         if (key == Key.shift): self.shift_down = False
         if (key == Key.ctrl_l): self.ctrl_down = False
 
     def update_image(self):
         async def update():
-            img = await self.connector.get_screenshot(self.monitor,self.pix)
+            img = await self.connector.get_screenshot(pix=300000)
+            if (img is None):
+                img = np.zeros((100,100,3),dtype=np.uint8)
+            else: print(f"img shape {img.shape}")
             #print(match_ratio_to_bounds(len(img[0]),len(img),MAX_IMG_WIDTH,MAX_IMG_HEIGHT))
             img = cv2.resize(img,match_ratio_to_bounds(len(img[0]),len(img),MAX_IMG_WIDTH,MAX_IMG_HEIGHT))
             self.img_shape = img.shape
@@ -125,8 +134,10 @@ class ImageUI(tk.Tk):
             self.image_shower.image = tk_image
 
         while True:
-            print("run")
             asyncio.run(update())
+
+    def add_message(self, message: str):
+        self.messageList.insert(0,f"{self.messageList.size() + 1}. {message}")
 
 if __name__ == "__main__":
     # Create and run the application
