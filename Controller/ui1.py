@@ -21,7 +21,7 @@ MAX_IMG_WIDTH = WIDTH - MENU_WIDTH - (MARGIN * 2)
 MAX_IMG_HEIGHT = HEIGHT - ((MENU_HEIGHT + MARGIN) * 2)
 
 #IP = "192.168.1.231"
-IP = "http://localhost"
+IP = "http://10.100.102.6"
 
 class ImageUI(tk.Tk):
     def __init__(self):

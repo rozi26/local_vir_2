@@ -89,3 +89,6 @@ async def get_containes_sound_player(data_getter, step_size: float):
 
     asyncio.create_task(reader())
     await loader()
+
+def int_to_bytes(num: int, size: int = 4) -> bytes:
+    return num.to_bytes(size, byteorder='little')
