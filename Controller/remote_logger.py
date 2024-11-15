@@ -6,7 +6,7 @@ from waitress import serve
 from flask_cors import CORS
 from threading import Thread
 
-LOG_PATH = r"F:\programing\python\fun\vir2\Controller\logs.txt"
+LOG_PATH = "\\".join(str(__file__).split("\\")[:-1]) + "\\logs.txt"
 REMOTE_LOGGER_PORT = 1025
 
 def write_log_message(message: str):
@@ -25,7 +25,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 @app.post("/")
 def report_log():
-    data = json.loads(request.get_json())
+    data = request.get_json()
     user_ip = request.remote_addr
     try:
         write_log_message(f'from {user_ip} got [{data["message"]}]')
@@ -38,6 +38,7 @@ def open_resiver():
     def p_open_resiver(): serve(app,host=IP, port=REMOTE_LOGGER_PORT)
     Thread(target=p_open_resiver).start()
     write_log_message(f"open resiver at {IP}:{REMOTE_LOGGER_PORT}")
+    return IP,REMOTE_LOGGER_PORT
 
 if (__name__ == "__main__"):
     open_resiver()

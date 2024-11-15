@@ -14,9 +14,13 @@ import json
 from utils import send_get_request_async, send_post_request_async, read_udp
 from PIL import Image
 from matplotlib import pyplot as plt
+from remote_logger import REMOTE_LOGGER_PORT
+
+D_PORT = 5000
+
 
 class Connector:
-    def __init__(self,ip,port=8000) -> None:
+    def __init__(self,ip,port=D_PORT) -> None:
         self.ip = ip
         self.url = f"{ip}:{port}"
 
@@ -83,37 +87,37 @@ class Connector:
     
 
 class Connector2:
-    def __init__(self, ip, port=8000):
+    def __init__(self, ip, port=D_PORT):
         self.ip = ip
         self.port = port
         self.stream_socket = None
         self.stream_payload_size = None
         self.config = None
+        asyncio.run(self.get_config())
 
     async def get_config(self):
+        data = {"log_ip":f"http://{socket.gethostbyname(socket.gethostname())}","log_port":REMOTE_LOGGER_PORT}
         if self.config is None:
-            self.config = await self.send_command("set_config")
+            self.config = (await self.send_command_async("set_config",data))['config']
         return self.config
 
     async def update_config(self):
-        await self.send_command('set_config', {'config': self.config})
+        await self.send_command_async('set_config', {'config': self.config})
 
-    async def send_command(self, command, data=None):
-        if data is None:
-            data = {}
+    def send_command(self, command, data=None):
+        return asyncio.run(self.send_command_async(command,data))
+    
+    async def send_command_async(self, command, data=None,expect_bin=False):
+        if data is None: data = {}
         data["command"] = command
-        response = await self._send_socket_request(data)
+        response = await self._send_socket_request(data,expect_bin)
         return response
 
     async def get_screenshot(self, monitor=1, pix=150000) -> np.array:
-        try:
-            data = {"command": "screenshot", "monitor": monitor, "pix": pix}
-            img_data = await self._send_socket_request(data, expect_binary=True)
-            img = np.array(Image.open(io.BytesIO(img_data)))
-            return img
-        except Exception as e:
-            print(f"Error getting screenshot: {e}")
-            return None
+        data = await self.send_command_async("screenshot",{'pix':pix,'monitor':monitor},True)
+        image_file = io.BytesIO(data)
+        img = np.array(Image.open(image_file))
+        return img
 
     async def _send_socket_request(self, data, expect_binary=False):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -156,8 +160,8 @@ class Connector2:
 async def test():
 
     con = Connector2("10.100.102.6")
-    res = await con.get_config()
-    print(f"resive {res}")
+    #res = await con.get_config()
+    res = await con.get_screenshot()
 
 if (__name__ == "__main__"):
     asyncio.run(test())

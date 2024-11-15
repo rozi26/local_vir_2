@@ -6,9 +6,9 @@ import cv2
 import time
 from utils import match_ratio_to_bounds, key_to_int
 from threading import Thread
-from connector import Connector
+from connector import Connector, Connector2
 from pynput.keyboard import Key, Listener
-
+from remote_logger import open_resiver
 
 WIDTH = 1200
 HEIGHT = 1000
@@ -17,21 +17,26 @@ MENU_WIDTH = 200
 MARGIN = 20
 MESSAGE_BOARD_HEIGHT = 200
 
+WITH_LOGGER = True
+
 MAX_IMG_WIDTH = WIDTH - MENU_WIDTH - (MARGIN * 2)
 MAX_IMG_HEIGHT = HEIGHT - ((MENU_HEIGHT + MARGIN) * 2)
 
 #IP = "192.168.1.231"
-IP = "http://10.100.102.6"
+IP = "10.100.102.6"
 
 class ImageUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Image Viewer")
         self.geometry(f"{WIDTH}x{HEIGHT}")
+        
+        open_resiver() #activate logger
 
         #effect vars
-        self.connector = Connector(IP)
-        self.en_data = self.connector.send_command('data',{})
+        self.connector = Connector2(IP)
+        self.en_data: dict = self.connector.send_command('data',{})
+        print(f"data is {self.en_data}")
         self.control_mode = False #does keybord keys and mouse effect the screen
         self.mouse_over = False
         self.ctrl_down = False
@@ -64,6 +69,7 @@ class ImageUI(tk.Tk):
         add_menu_button('send',lambda: self.connector.send_command('show_text',{'text':str(self.text_box_value.get())}))
         add_menu_button('speak',lambda: self.connector.send_command('speak_text',{'text':str(self.text_box_value.get())}))
         
+        self.move_monitor_button = add_menu_button(f"monitor 1",lambda: self.move_monitor())
 
         self.image_shower = tk.Label(self)
         self.image_shower.place(x=MARGIN,y=MENU_HEIGHT+MARGIN)
@@ -77,8 +83,8 @@ class ImageUI(tk.Tk):
 
         #add the control event listeners
         self.image_shower.bind('<Motion>', lambda e: self.send_control_command('mouse_move',{
-            'x':round(self.en_data[f'monitor_{self.monitor}']['width']*e.x/self.img_shape[1]),
-            'y':round(self.en_data[f'monitor_{self.monitor}']['height']*e.y/self.img_shape[0])}))
+            'x':round(self.en_data[f'monitor_{self.monitor}']['x'] + self.en_data[f'monitor_{self.monitor}']['width']*e.x/self.img_shape[1]),
+            'y':round(self.en_data[f'monitor_{self.monitor}']['y'] + self.en_data[f'monitor_{self.monitor}']['height']*e.y/self.img_shape[0])}))
         fs = lambda i,d: self.send_control_command('press',{'button':i,'down':d})
         self.image_shower.bind('<Button-1>', lambda e: fs(1,True))
         self.image_shower.bind('<ButtonRelease-1>', lambda e: fs(1,False))
@@ -109,6 +115,10 @@ class ImageUI(tk.Tk):
         self.control_mode = not self.control_mode
         self.control_button.config(text = "control" if self.control_mode else "free")
 
+    def move_monitor(self):
+        self.monitor = 1 + ((self.monitor) % len([k for k in self.en_data if 'monitor_' in k]))
+        self.move_monitor_button.config(text = f"monitor {self.monitor}")
+
     def key_pressed_down_event(self,key):
         if (key == Key.shift): self.shift_down = True
         if (key == Key.ctrl_l): self.ctrl_down = True
@@ -121,7 +131,7 @@ class ImageUI(tk.Tk):
 
     def update_image(self):
         async def update():
-            img = await self.connector.get_screenshot(pix=300000)
+            img = await self.connector.get_screenshot(monitor=self.monitor,pix=300000)
             if (img is None):
                 img = np.zeros((100,100,3),dtype=np.uint8)
             else: print(f"img shape {img.shape}")
@@ -134,7 +144,10 @@ class ImageUI(tk.Tk):
             self.image_shower.image = tk_image
 
         while True:
-            asyncio.run(update())
+            try:
+                asyncio.run(update())
+            except Exception as e:
+                print(f"screen fail with {e}")
 
     def add_message(self, message: str):
         self.messageList.insert(0,f"{self.messageList.size() + 1}. {message}")

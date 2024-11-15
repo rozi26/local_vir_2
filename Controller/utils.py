@@ -4,7 +4,7 @@ import io
 import pyaudio
 import wave
 import asyncio
-import simpleaudio as sa
+#import simpleaudio as sa
 import time
 from pynput.keyboard import KeyCode,Key
 from threading import Thread
@@ -73,8 +73,8 @@ async def get_containes_sound_player(data_getter, step_size: float):
             else:
                 data = await queue.get()
                 print(f"read data from size {queue.qsize()}")
-                pobj = sa.play_buffer(data,1,2,44100)
-                pobj.wait_done()
+                #pobj = sa.play_buffer(data,1,2,44100)
+                #pobj.wait_done()
 
     async def loader():
         async def load():
